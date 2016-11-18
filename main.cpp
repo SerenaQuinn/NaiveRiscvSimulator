@@ -2,34 +2,17 @@
 #include <algorithm>
 #include <cstdlib>
 #include <elf.h>
-#include <unistd.h>
 #include <fcntl.h> 
 #include <unordered_map>
 #include "decode.cpp"
 using namespace std;
-
-// class Memory {
-// 	unordered_map<unsigned long long, char> m;
-// 	char read_char_memory (unsigned long long addr) {
-// 		return m[addr];
-// 	}
-// 	void write_char_memory (unsigned long long addr, char ch) {
-// 		m[addr] = ch;
-// 	}
-// 	int read_int_memory (unsigned long long addr) {
-// 		int ret = 0;
-// 		for (int i = 3; i >= 0; i--) {
-// 			ret = (ret << 8) | m[addr + i];
-// 		}
-// 		return ret;
-// 	}
-// }
 
 const int memory_size = 256 * 1024 * 1024;
 long long reg[64];
 float freg[32];
 char memory[memory_size];
 unsigned long long PC;
+// unsigned long long end = 0;
 
 int main (int argc, char **argv)
 {
@@ -52,6 +35,7 @@ int main (int argc, char **argv)
 		if (ph->p_type == PT_LOAD) {
 			lseek (fd, ph->p_offset, SEEK_SET);
 			read (fd, &memory[ph->p_vaddr], ph->p_filesz);
+			// end = max(end, ph->p_vaddr + ph->p_memsz);
 			// printf ("vaddr: %lx\nfilesize: %ld\n", ph->p_vaddr, ph->p_filesz);
 		}
 	}
@@ -59,11 +43,12 @@ int main (int argc, char **argv)
 	close (fd);
 
 	PC = ehdr->e_entry;
-	reg[2] = 0x800000;
+	reg[2] = memory_size; // initiate the sp pointer
 	while (true) {
 		unsigned ins = *(unsigned *)(memory + PC);
-		// printf ("PC = %llx\tinstruction = %x\n", PC, ins);
+		// printf("PC = %llx\n", PC);
 		PC += 4;
 		decode (ins);
+		// printf("a0 = %lld\n", reg[10]);
 	}
 }
