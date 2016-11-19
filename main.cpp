@@ -12,7 +12,6 @@ long long reg[64];
 float freg[32];
 char memory[memory_size];
 unsigned long long PC;
-// unsigned long long end = 0;
 
 int main (int argc, char **argv)
 {
@@ -35,20 +34,24 @@ int main (int argc, char **argv)
 		if (ph->p_type == PT_LOAD) {
 			lseek (fd, ph->p_offset, SEEK_SET);
 			read (fd, &memory[ph->p_vaddr], ph->p_filesz);
-			// end = max(end, ph->p_vaddr + ph->p_memsz);
-			// printf ("vaddr: %lx\nfilesize: %ld\n", ph->p_vaddr, ph->p_filesz);
 		}
 	}
 
 	close (fd);
 
 	PC = ehdr->e_entry;
-	reg[2] = memory_size; // initiate the sp pointer
+	reg[2] = memory_size - 0xF0; // initiate the sp pointer
 	while (true) {
 		unsigned ins = *(unsigned *)(memory + PC);
-		// printf("PC = %llx\n", PC);
+		// printf("PC:0x%llx\n", PC);
 		PC += 4;
 		decode (ins);
-		// printf("a0 = %lld\n", reg[10]);
+		// printf("reg[0]:%lld\nreg[1]:%lld\n", reg[0], reg[1]);
+		// for(int i = 3; i < 32; i++){
+		// 	printf("reg[%d]:%lld\n", i, reg[i]);
+		// }
+		// if(PC >= 0x14478 && PC <= 0x144c4){
+		// 	printf("sp:%u\n", *(unsigned*)(memory+reg[2]+16));
+		// }
 	}
 }

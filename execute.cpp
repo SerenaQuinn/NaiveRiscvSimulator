@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 
 typedef unsigned long long ull;
 typedef long long ll;
@@ -11,10 +12,12 @@ extern char memory[];
 extern ull PC;
 
 void LUI(unsigned rd, int imm) {
+	// printf("LUI: rd = %d\timm = %d\n", rd, imm);
 	reg[rd] = imm;
 }
 
 void AUIPC(unsigned rd, int imm) {
+	// printf("AUIPC: rd = %d\timm = %d\n", rd, imm);
 	reg[rd] = PC - 4 + imm;
 }
 
@@ -23,6 +26,7 @@ void JAL(unsigned rd, int imm) {
 		reg[rd] = PC;
 	}
 	PC = PC - 4 + imm;
+	// printf("JAL: target = %llx\n", PC);
 }
 
 void JALR(unsigned rd, unsigned rs1, int imm) {
@@ -30,39 +34,46 @@ void JALR(unsigned rd, unsigned rs1, int imm) {
 		reg[rd] = PC;
 	}
 	PC = ((reg[rs1] + imm) >> 1) << 1;
+	// printf("JALR: target = %llx\n", PC);
 }
 
 void BEQ(unsigned rs1, unsigned rs2, int imm) {
+	// printf("BEQ: %d %d %llx\n", rs1, rs2, PC - 4 + imm);
 	if(reg[rs1] == reg[rs2]) {
 		PC = PC - 4 + imm;
 	}
 }
 
 void BNE(unsigned rs1, unsigned rs2, int imm) {
+	// printf("BNE: %d %d %llx\n", rs1, rs2, PC - 4 + imm);
 	if(reg[rs1] != reg[rs2]) {
 		PC = PC - 4 + imm;
 	}
 }
 
 void BLT(unsigned rs1, unsigned rs2, int imm) {
+	// printf("BLT: %d %d %llx\n", rs1, rs2, PC - 4 + imm);
 	if(reg[rs1] < reg[rs2]) {
 		PC = PC - 4 + imm;
 	}
 }
 
 void BGE(unsigned rs1, unsigned rs2, int imm) {
+	// printf("BGE: %d %d %llx\n", rs1, rs2, PC - 4 + imm);
 	if(reg[rs1] >= reg[rs2]) {
 		PC = PC - 4 + imm;
 	}
 }
 
 void BLTU(unsigned rs1, unsigned rs2, int imm) {
+	// printf("BLTU: %d %d %llx\n", rs1, rs2, PC - 4 + imm);
 	if((ull)reg[rs1] < (ull)reg[rs2]) {
 		PC = PC - 4 + imm;
 	}
 }
 
 void BGEU(unsigned rs1, unsigned rs2, int imm) {
+	// printf("BGEU: %d %d %llx\n", rs1, rs2, PC - 4 + imm);
 	if((ull)reg[rs1] >= (ull)reg[rs2]) {
 		PC = PC - 4 + imm;
 	}
@@ -356,6 +367,27 @@ void REMUW(unsigned rd, unsigned rs1, unsigned rs2) {
 	reg[rd] = (int)((unsigned)reg[rs1] % (unsigned)reg[rs2]);
 }
 
+struct	stat_riscv
+{
+    uint64_t	a;
+    uint64_t	b;
+    uint32_t	c;
+    uint32_t	d;
+    uint32_t	e;
+    uint32_t	f;
+    uint64_t	g;
+    uint64_t	h;
+    uint64_t    i;
+    long        st_spare1;
+    uint64_t    j;
+    long		st_spare2;
+    uint64_t	k;
+    long		st_spare3;
+    long		st_blksize;
+    long		st_blocks;
+    long        st_spare4[2];
+};
+
 void ECALL() {
 	switch(reg[17]) {
 		case 57:  // close
@@ -363,24 +395,40 @@ void ECALL() {
 			break;
 		// case 62:
 		// 	break;
-		// case 63:
-		// 	break;
+		case 63: // sys_read
+			reg[10] = read(reg[10], (void *)(memory + reg[11]), (int)reg[12]);
+			break;
 		case 64: // sys_write
-			// printf("a0 = %lld\na1 = %lld\na2 = %lld\n", reg[10], reg[11], reg[12]);
 			reg[10] = write(reg[10], memory + reg[11], (int)reg[12]);
-			// printf("\nreturn value = %lld\n", reg[10]);
 			break;
-		case 80:
-			reg[10] = fstat(reg[10], (struct stat *)(memory + reg[11]));
-			break;
+		case 80: // fstat
+			// reg[10] = fstat(reg[10], (struct stat *)(memory + reg[11]));
+			// break;
+			{
+				struct stat tmp;
+				reg[10] = fstat(reg[10], &tmp);
+	            struct stat_riscv* ptr= (struct stat_riscv* )(memory + reg[11]);
+	            ptr->a=tmp.st_dev;
+	            ptr->b=tmp.st_ino;
+	            ptr->c=tmp.st_mode;
+	            ptr->d=tmp.st_nlink;
+	            ptr->e=tmp.st_uid;
+	            ptr->f=tmp.st_gid;
+	            ptr->g=tmp.st_rdev;
+	            ptr->h=tmp.st_size;
+	            ptr->i=tmp.st_atime;
+	            ptr->j=tmp.st_mtime;
+	            ptr->k=tmp.st_ctime;
+	        }
+	        break;
 		case 93:
-			printf ("normal exit\n");
+			// printf ("normal exit\n");
 			exit(0);
 			break;
-		// case 169:
-		// 	break;
-		case 214:  //sys_brk
-			// reg[10] = reg[10];
+		case 169: //
+			reg[10] = gettimeofday((struct timeval *)(memory + reg[10]), NULL);
+			break;
+		case 214: //sys_brk
 			break;
 		default:
 			printf("system call %lld not implemented\n", reg[17]);

@@ -183,6 +183,7 @@ void load(int imm) {
 			break;
 		case 6:
 			LWU(rd, rs1, imm);
+			break;
 		default:
 			printf("load funct3 error: %d\n", funct3);
 			exit(0);
@@ -371,6 +372,7 @@ void aluw() {
 			break;
 		case 4:
 			DIVW(rd, rs1, rs2);
+			break;
 		case 5:
 			if(funct7 == 1) {
 				DIVUW(rd, rs1, rs2);
@@ -387,6 +389,7 @@ void aluw() {
 			break;
 		case 7:
 			REMUW(rd, rs1, rs2);
+			break;
 		default:
 			printf("aluw funct3 error: %d\n", funct3);
 			panic();
